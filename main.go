@@ -1,12 +1,25 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
+
+type Permission struct {
+	Name string `json:"name"`
+	Slug string `json:"slug"`
+}
+
+type User struct {
+	ID          string       `json:"id"`
+	Permissions []Permission `json:"permissions"`
+}
 
 func init() {
 	flag.StringVar(&token, "t", "", "Bot Token")
@@ -66,8 +79,25 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	if m.Content == "!k" {
-		s.ChannelMessageSend(c.ID, "That's me!")
+	if m.Content == "!check_roles" {
+		member, err := s.State.Member(g.ID, m.Author.ID)
+		if err != nil {
+			return
+		}
+
+		var buffer bytes.Buffer
+
+		for i := 0; i < len(member.Roles); i++ {
+			mRole, err := s.State.Role(g.ID, member.Roles[i])
+			if err != nil {
+				return
+			}
+
+			json_m, _ := json.Marshal(mRole)
+			buffer.WriteString(string(json_m) + "\n")
+		}
+
+		s.ChannelMessageSend(c.ID, buffer.String())
 	}
 
 	if m.Content == "!ping" {
@@ -76,6 +106,20 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	if m.Content == "!pong" {
 		s.ChannelMessageSend(c.ID, "Ping.")
+	}
+
+	if m.Content == "!req_chan" {
+		allowed, err := hasRole(s, g, m.Author, "Member")
+		if err != nil {
+			fmt.Println("Something went wrong when checking the roles for an author: ", err)
+			return
+		}
+
+		if allowed {
+			s.ChannelMessageSend(c.ID, fmt.Sprintf("<@!%s> Not implemented.", m.Author.ID))
+		} else {
+			s.ChannelMessageSend(c.ID, fmt.Sprintf("<@!%s> You don't have permission to use this command.", m.Author.ID))
+		}
 	}
 
 	if strings.HasPrefix(m.Content, "!setgame") {
@@ -99,25 +143,47 @@ func guildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
 		return
 	}
 
+	/* Mute while in-dev.
 	for _, channel := range event.Guild.Channels {
 		_, _ = s.ChannelMessageSend(channel.ID, "Hello everyone. My name's Kylar, and soon I'll be able to do a lot of awesome stuff!")
+	}*/
+}
+
+func getRole(g *discordgo.Guild, role string) *discordgo.Role {
+	for _, r := range g.Roles {
+		if r.Name == role {
+			return r
+		}
 	}
+
+	return nil
 }
 
 func hasRole(s *discordgo.Session, g *discordgo.Guild, user *discordgo.User, role string) (bool, error) {
-	member, err := s.State.Member(g.ID, user.ID)
-	if err != nil {
+
+	var member *discordgo.Member
+	var checkRole *discordgo.Role
+	var err error
+
+	if member, err = s.State.Member(g.ID, user.ID); err != nil {
 		return false, err
 	}
 
+	if checkRole = getRole(g, role); checkRole == nil {
+		return false, errors.New("Role not found")
+	}
+
 	for i := 0; i < len(member.Roles); i++ {
-		mRole, err := s.State.Role(g.ID, member.Roles[i])
-		if err != nil {
+		var mRole *discordgo.Role
+		if mRole, err = s.State.Role(g.ID, member.Roles[i]); err != nil {
 			return false, err
 		}
 
-		return mRole.Name == role, nil
+		if mRole.Name == role || checkRole.Position < mRole.Position {
+			return true, nil
+		}
 	}
 
 	return false, nil
+
 }
