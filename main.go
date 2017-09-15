@@ -95,7 +95,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 // This function will be called every time a newguild is joined.
 func guildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
-	if event.Guild.Unavailable != nil {
+	if event.Guild.Unavailable == true {
 		return
 	}
 
