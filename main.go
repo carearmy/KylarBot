@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Knetic/govaluate"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -98,6 +99,23 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 
 		s.ChannelMessageSend(c.ID, buffer.String())
+	}
+
+	if strings.HasPrefix(m.Content, "!math ") {
+		var expression *govaluate.EvaluableExpression
+		var err error
+		var result interface{}
+
+		if expression, err = govaluate.NewEvaluableExpression(m.Content[len("!math "):]); err != nil {
+			s.ChannelMessageSend(c.ID, fmt.Sprintf("<@!%s> Something went wrong when calculating the results: %s", m.Author.ID, err.Error()))
+			return
+		}
+		if result, err = expression.Evaluate(nil); err != nil {
+			s.ChannelMessageSend(c.ID, fmt.Sprintf("<@!%s> Something went wrong when calculating the results: %s", m.Author.ID, err.Error()))
+			return
+		}
+
+		s.ChannelMessageSend(c.ID, fmt.Sprintf("<@!%s> Result: %v", m.Author.ID, result))
 	}
 
 	if m.Content == "!ping" {
