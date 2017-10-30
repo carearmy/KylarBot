@@ -12,16 +12,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-type Permission struct {
-	Name string `json:"name"`
-	Slug string `json:"slug"`
-}
-
-type User struct {
-	ID          string       `json:"id"`
-	Permissions []Permission `json:"permissions"`
-}
-
 func init() {
 	flag.StringVar(&token, "t", "", "Bot Token")
 	flag.Parse()
@@ -30,6 +20,7 @@ func init() {
 var token string
 
 func main() {
+	dummyConfig()
 
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + token)

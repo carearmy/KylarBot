@@ -1,0 +1,10 @@
+roles:
+- id: general
+  permissions:
+  - chat.write
+members:
+- id: 2t23t
+  permissions:
+  - chat.write
+  roles:
+  - general
