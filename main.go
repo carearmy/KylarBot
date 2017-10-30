@@ -38,6 +38,9 @@ func main() {
 	// Register guildCreate as a callback for the guildCreate events.
 	dg.AddHandler(guildCreate)
 
+	// Register userJoin as a callback for the guildMemberAdd events.
+	dg.AddHandler(userJoin)
+
 	// Open the websocket and begin listening.
 	err = dg.Open()
 	if err != nil {
@@ -53,6 +56,11 @@ func main() {
 func ready(s *discordgo.Session, event *discordgo.Ready) {
 	// Make sure we're not idle
 	_ = s.UpdateStatus(0, "")
+}
+
+func userJoin(s *discordgo.Session, event *discordgo.GuildMemberAdd) {
+	guild, _ := s.Guild(event.GuildID)
+	s.GuildMemberRoleAdd(event.GuildID, event.Member.User.ID, getRole(guild, "Civilian").ID)
 }
 
 // This function will be called every time a new message is created on any channel the bot has access to.
